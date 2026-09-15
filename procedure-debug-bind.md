@@ -26,7 +26,7 @@ scénario ou le même compte réinitialisé entre deux essais, au choix.)
 .\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password (Read-Host -AsSecureString)
 ```
 
-**Sortie attendue** : `data 52e` → mot de passe incorrect, ou bon compte/mauvais mot de passe.
+**Sortie observée sur ce lab** : `data 52e` → mot de passe incorrect, ou bon compte/mauvais mot de passe.
 **Remédiation** : vérifier le mot de passe saisi ; si répété, vérifier que ce n'est pas en fait
 un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un message générique.
 
@@ -44,7 +44,7 @@ un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un messa
 
 ![Bind refusé avec data 533](screenshots/scenario2-bind-disabled.png)
 
-**Sortie attendue** : `data 533` → compte désactivé dans l'annuaire.
+**Sortie observée sur ce lab** : `data 533` → compte désactivé dans l'annuaire.
 **Remédiation** : `Enable-ADAccount` si la désactivation n'était pas volontaire.
 
 ## 3. Compte expiré (`data 701`)
@@ -56,7 +56,7 @@ un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un messa
 
 ![Bind refusé avec data 701](screenshots/scenario3-expired-account.png)
 
-**Sortie attendue** : `data 701` → date d'expiration du compte dépassée.
+**Sortie observée sur ce lab** : `data 701` → date d'expiration du compte dépassée.
 **Remédiation** : `Clear-ADAccountExpiration` ou repousser la date via `Set-ADAccountExpiration`.
 
 ## 4. Compte verrouillé (`data 775`)
@@ -73,7 +73,7 @@ un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un messa
 
 ![Bind refusé avec data 775 même avec le bon mot de passe](screenshots/scenario4-bind-locked-correct-password.png)
 
-**Sortie attendue** : `data 775`, même avec le **bon** mot de passe — c'est la signature d'un
+**Sortie observée sur ce lab** : `data 775`, même avec le **bon** mot de passe — c'est la signature d'un
 compte verrouillé : contrairement à `data 52e`, l'erreur persiste même après correction du mot
 de passe. Sur ce lab, le seuil est de 5 échecs (`LockoutThreshold=5`), déverrouillage
 automatique après 30 minutes (`LockoutDuration`).
@@ -89,7 +89,8 @@ la fenêtre de déverrouillage automatique.
 
 ![Bind refusé avec data 773](screenshots/scenario5-password-must-change.png)
 
-**Sortie attendue** : `data 532` ou `773` selon le contexte exact — confirmé `773` sur ce lab — un bind simple ne peut pas
+**Sortie observée sur ce lab** : `data 773` (le code exact peut varier selon le contexte —
+`532` est l'autre code possible pour ce même type de panne) — un bind simple ne peut pas
 changer le mot de passe lui-même, contrairement à une session interactive Windows.
 **Remédiation** : forcer un changement de mot de passe via un canal qui le permet
 (`Set-ADAccountPassword` côté admin, ou le portail self-service de l'utilisateur).
@@ -106,10 +107,11 @@ Un bind anonyme qui **réussit** est le comportement par défaut du protocole LD
 — ça ne veut rien dire en soi. Le script tente ensuite une recherche réelle dans l'annuaire
 avec cette session anonyme : c'est ce résultat-là qui compte.
 
-**Sortie attendue (normale)** : bind accepté, mais lecture **refusée** — comportement par
-défaut d'AD, pas un risque.
-**Sortie à risque** : bind accepté ET lecture **réussie** — n'importe qui sur le réseau peut
-alors énumérer le contenu de l'annuaire sans identifiants.
+**Sortie observée sur ce lab (normale)** : bind accepté, mais lecture **refusée** —
+comportement par défaut d'AD, pas un risque.
+**Sortie qui serait à risque** (pas ce qu'on observe ici) : bind accepté ET lecture
+**réussie** — n'importe qui sur le réseau peut alors énumérer le contenu de l'annuaire sans
+identifiants.
 **Remédiation si lecture possible** : vérifier `dsHeuristics` / les ACL du groupe "Anonymous
 Logon" par défaut, restreindre l'accès en lecture anonyme.
 
@@ -121,7 +123,7 @@ Logon" par défaut, restreindre l'accès en lecture anonyme.
 
 ![Serveur LDAPS injoignable — aucun certificat configuré](screenshots/scenario7-ldaps-unavailable.png)
 
-**Sortie réelle sur ce lab** : "serveur LDAP indisponible" sur le port 636, pas une erreur de
+**Sortie observée sur ce lab** : "serveur LDAP indisponible" sur le port 636, pas une erreur de
 certificat — ce DC n'a aucun certificat LDAPS configuré (déjà documenté dans
 [LDAP-App-Role-Audit](https://github.com/Anne-LaureS/LDAP-App-Role-Audit)), donc le service
 LDAPS n'écoute même pas sur ce port. C'est plus fondamental qu'un certificat simplement non
@@ -140,7 +142,7 @@ mais reste rejeté, alors distribuer son certificat racine aux postes clients (c
 
 ![Résolution implicite du sAMAccountName nu — data 52e au lieu de 525](screenshots/scenario8-dn-format.png)
 
-**Sortie réelle sur ce lab** : `data 52e` (mauvais mot de passe), pas `data 525` (utilisateur
+**Sortie observée sur ce lab** : `data 52e` (mauvais mot de passe), pas `data 525` (utilisateur
 introuvable) comme on pourrait s'y attendre en passant un `sAMAccountName` nu au lieu d'un UPN
 ou d'un DN complet — le client LDAP .NET/Windows semble résoudre implicitement ce nom via le
 contexte d'authentification intégré même avec un bind de type `Basic`, masquant l'erreur de
