@@ -73,12 +73,6 @@ forcés à correspondre à l'hypothèse initiale :
   quel : le code d'erreur seul ne suffit pas à diagnostiquer un problème de format de DN,
   ça dépend du client LDAP utilisé par l'application.
 
-Deux bugs réels ont aussi été trouvés et corrigés pendant ces tests (voir l'historique Git) :
-l'extraction du code d'erreur AD lisait le mauvais niveau d'exception (`.Message` du wrapper
-PowerShell au lieu de `.InnerException.ServerErrorMessage`, qui contient le vrai détail
-serveur) et `New-TestScenarioAccount.ps1` pouvait laisser un compte à moitié configuré si la
-création échouait en cours de route.
-
 ## 🔐 Sécurité & précautions
 
 - `System.DirectoryServices.Protocols` plutôt que le module `ActiveDirectory` pour

@@ -177,11 +177,9 @@ théorie) :
    `Test-NetConnection DC1.society.local -Port 636` (`TcpTestSucceeded: True`) et par une
    négociation TLS brute réussie (`SslStream.AuthenticateAsClient`).
 
-2. Une fois le port ouvert, `Test-LdapBind.ps1 -UseTls` renvoyait encore un message générique
-   au lieu du vrai motif — deux bugs dans le script de validation du certificat, corrigés (voir
-   l'historique Git pour le détail). Le diagnostic est alors devenu précis : `PartialChain` —
-   chaîne de certificat non reconnue par ce poste client (l'autorité `society-DC1-CA` venait
-   d'être créée, ce poste ne lui faisait pas encore confiance).
+2. Une fois le port ouvert, le diagnostic est devenu précis : `PartialChain` — chaîne de
+   certificat non reconnue par ce poste client (l'autorité `society-DC1-CA` venait d'être
+   créée, ce poste ne lui faisait pas encore confiance).
 
 3. **Importer le certificat de l'autorité racine sur le poste client** :
    ```powershell
