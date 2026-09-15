@@ -13,8 +13,8 @@ Ne jamais diagnostiquer sur un compte réel : les scénarios ci-dessous désacti
 verrouillent volontairement un compte.
 
 ```powershell
-$pwd = Read-Host -AsSecureString -Prompt "Mot de passe du compte de test"
-.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $pwd -Scenario Disabled
+$testPwd = Read-Host -AsSecureString -Prompt "Mot de passe du compte de test"
+.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $testPwd -Scenario Disabled
 ```
 
 (`-Scenario` accepte `Disabled`, `ExpiredAccount`, `ExpiredPassword`, `Locked` — un compte par
@@ -39,13 +39,13 @@ un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un messa
 ## 2. Compte désactivé (`data 533`)
 
 ```powershell
-.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $pwd -Scenario Disabled
+.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $testPwd -Scenario Disabled
 ```
 
 ![Compte de test créé et désactivé](screenshots/scenario2-account-created.png)
 
 ```powershell
-.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $pwd
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
 ```
 
 ![Bind refusé avec data 533](screenshots/scenario2-bind-disabled.png)
@@ -63,8 +63,8 @@ Enable-ADAccount -Identity btest -Server DC1.society.local -Credential (Get-Cred
 ## 3. Compte expiré (`data 701`)
 
 ```powershell
-.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $pwd -Scenario ExpiredAccount
-.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $pwd
+.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $testPwd -Scenario ExpiredAccount
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
 ```
 
 ![Bind refusé avec data 701](screenshots/scenario3-expired-account.png)
@@ -82,13 +82,13 @@ Bind réussi une fois l'expiration levée (`Success: True`).
 ## 4. Compte verrouillé (`data 775`)
 
 ```powershell
-.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $pwd -Scenario Locked
+.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $testPwd -Scenario Locked
 ```
 
 ![Verrouillage déclenché après 5 échecs](screenshots/scenario4-lockout-triggered.png)
 
 ```powershell
-.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $pwd
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
 ```
 
 ![Bind refusé avec data 775 même avec le bon mot de passe](screenshots/scenario4-bind-locked-correct-password.png)
@@ -110,8 +110,8 @@ Unlock-ADAccount -Identity btest -Server DC1.society.local -Credential (Get-Cred
 ## 5. Mot de passe à changer / expiré (`data 532` ou `773`)
 
 ```powershell
-.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $pwd -Scenario ExpiredPassword
-.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $pwd
+.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $testPwd -Scenario ExpiredPassword
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
 ```
 
 ![Bind refusé avec data 773](screenshots/scenario5-password-must-change.png)
@@ -152,7 +152,7 @@ Logon" par défaut, restreindre l'accès en lecture anonyme.
 ## 7. LDAPS non configuré
 
 ```powershell
-.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $pwd -UseTls
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd -UseTls
 ```
 
 ![Serveur LDAPS injoignable — aucun certificat configuré](screenshots/scenario7-ldaps-unavailable.png)
@@ -202,7 +202,7 @@ théorie) :
 ## 8. Mauvais format de DN
 
 ```powershell
-.\Test-LdapBind.ps1 -BindDN "btest" -Password $pwd
+.\Test-LdapBind.ps1 -BindDN "btest" -Password $testPwd
 ```
 
 ![Résolution implicite du sAMAccountName nu — data 52e au lieu de 525](screenshots/scenario8-dn-format.png)

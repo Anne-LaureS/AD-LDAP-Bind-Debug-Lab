@@ -45,9 +45,12 @@ Ne jamais tester une panne (compte désactivé, verrouillé...) sur un compte r�
 compte jetable dédié :
 
 ```powershell
-$pwd = Read-Host -AsSecureString -Prompt "Mot de passe du compte de test"
-.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $pwd -Scenario Locked
+$testPwd = Read-Host -AsSecureString -Prompt "Mot de passe du compte de test"
+.\New-TestScenarioAccount.ps1 -FirstName "Bind" -LastName "Test" -Password $testPwd -Scenario Locked
 ```
+
+(`$pwd` est une variable automatique PowerShell — le répertoire courant — évitez ce nom, un
+`cd` l'écraserait silencieusement.)
 
 Voir [`procedure-debug-bind.md`](procedure-debug-bind.md) pour les 8 scénarios complets
 (identifiants invalides, compte désactivé/expiré/verrouillé, mot de passe à changer, bind
