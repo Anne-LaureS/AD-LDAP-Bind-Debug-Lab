@@ -5,7 +5,7 @@
 ![LDAP](https://img.shields.io/badge/LDAP-Legacy%20Auth-0d1117?style=for-the-badge)
 
 Labo de debug pour l'authentification **legacy** par bind LDAP simple contre Active Directory —
-le pendant de [Okta-SSO-Debug-Lab](https://github.com/Anne-LaureS/Okta-SSO-Debug-Lab) (OIDC/SAML)
+le counterpart de [Okta-SSO-Debug-Lab](https://github.com/Anne-LaureS/Okta-SSO-Debug-Lab) (OIDC/SAML)
 pour les applications qui authentifient encore leurs utilisateurs directement contre l'annuaire
 (VPN, Wi-Fi RADIUS, applis internes) plutôt que via un SSO fédéré — un pattern toujours très
 répandu en entreprise à côté du SSO moderne.
