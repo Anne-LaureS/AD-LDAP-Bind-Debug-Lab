@@ -102,14 +102,16 @@ function Get-AdErrorDiagnosis {
 }
 
 $result = [PSCustomObject]@{
-    LdapServer    = $LdapServer
-    Port          = 0
-    Mode          = if ($CheckAnonymous) { "Anonyme" } else { "Authentifié" }
-    UseTls        = [bool]$UseTls
-    Success       = $false
-    ErrorCode     = ""
-    Diagnosis     = ""
-    RawError      = ""
+    LdapServer     = $LdapServer
+    Port           = 0
+    Mode           = if ($CheckAnonymous) { "Anonyme" } else { "Authentifié" }
+    UseTls         = [bool]$UseTls
+    Success        = $false
+    ErrorCode      = ""
+    Diagnosis      = ""
+    RawError       = ""
+    CertSubject    = ""
+    CertChainStatus = ""
 }
 
 try {
@@ -123,6 +125,48 @@ try {
     $ldapConnection.SessionOptions.ProtocolVersion = 3
     $ldapConnection.SessionOptions.SecureSocketLayer = [bool]$UseTls
 
+    $certDiagnostic = $null
+    if ($UseTls) {
+        # Le message .NET générique ("le serveur LDAP n'est pas disponible") est utilisé aussi
+        # bien pour "rien n'écoute" que pour un échec de négociation TLS — impossible de les
+        # distinguer depuis le message d'exception seul une fois le port confirmé joignable
+        # (Test-NetConnection). En fournissant notre propre callback de validation, on inspecte
+        # la vraie chaîne de certificats présentée par le serveur au lieu de deviner.
+        $ldapConnection.SessionOptions.VerifyServerCertificate = {
+            param($conn, $cert)
+            try {
+                # Le callback reçoit un X509Certificate (classe de base) ; X509Chain.Build()
+                # attend un X509Certificate2 — sans cette conversion explicite, l'appel lève
+                # une exception silencieusement avalée par la frontière native LDAP/Schannel,
+                # qui retombe alors sur un message générique ("serveur non disponible") sans
+                # rapport avec la vraie cause.
+                $cert2 = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($cert)
+                $chain = New-Object System.Security.Cryptography.X509Certificates.X509Chain
+                # RevocationMode = NoCheck : choix assumé, pas un raccourci caché — la CA de ce
+                # lab (interne, société.local) ne publie pas de CRL accessible depuis ce poste,
+                # comme beaucoup de CA internes à faible enjeu en entreprise. La vérification de
+                # révocation reste pertinente pour une CA publique/externe, pas ici.
+                $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+                [void]$chain.Build($cert2)
+                $statuses = $chain.ChainStatus | ForEach-Object { "$($_.Status): $($_.StatusInformation.Trim())" }
+                $script:certDiagnostic = [PSCustomObject]@{
+                    Subject     = $cert2.Subject
+                    Issuer      = $cert2.Issuer
+                    NotAfter    = $cert2.GetExpirationDateString()
+                    ChainStatus = if ($statuses.Count -gt 0) { $statuses -join '; ' } else { "Chaîne valide" }
+                }
+                return ($statuses.Count -eq 0)
+            }
+            catch {
+                $script:certDiagnostic = [PSCustomObject]@{
+                    Subject = ""; Issuer = ""; NotAfter = ""
+                    ChainStatus = "Erreur interne du callback de validation : $($_.Exception.Message)"
+                }
+                return $false
+            }
+        }
+    }
+
     if ($CheckAnonymous) {
         $ldapConnection.AuthType = [System.DirectoryServices.Protocols.AuthType]::Anonymous
     }
@@ -134,6 +178,12 @@ try {
 
     $ldapConnection.Bind()
     $result.Success = $true
+
+    if ($UseTls -and $certDiagnostic) {
+        $result.CertSubject = $certDiagnostic.Subject
+        $result.CertChainStatus = $certDiagnostic.ChainStatus
+        Write-Host "Certificat serveur : $($certDiagnostic.Subject) (expire le $($certDiagnostic.NotAfter)) — $($certDiagnostic.ChainStatus)" -ForegroundColor DarkGray
+    }
 
     if ($CheckAnonymous) {
         # Un bind anonyme qui réussit est le comportement PAR DÉFAUT du protocole LDAP (RFC
@@ -196,7 +246,17 @@ catch {
         $result.Diagnosis = "Bind anonyme correctement refusé"
     }
     else {
-        $diag = Get-AdErrorDiagnosis -ErrorMessage $diagnosticText
+        if ($UseTls -and $certDiagnostic -and $certDiagnostic.ChainStatus -ne "Chaîne valide") {
+            # Le callback de validation a bien reçu un certificat du serveur — l'échec vient
+            # donc réellement de la chaîne de confiance, pas d'un port fermé, quel que soit le
+            # message générique .NET renvoyé par ailleurs. On privilégie ce diagnostic précis.
+            $result.CertSubject = $certDiagnostic.Subject
+            $result.CertChainStatus = $certDiagnostic.ChainStatus
+            $diag = [PSCustomObject]@{ Code = ""; Diagnosis = "Certificat LDAPS présenté mais rejeté : $($certDiagnostic.ChainStatus) (sujet : $($certDiagnostic.Subject))" }
+        }
+        else {
+            $diag = Get-AdErrorDiagnosis -ErrorMessage $diagnosticText
+        }
         $result.ErrorCode = $diag.Code
         $result.Diagnosis = $diag.Diagnosis
         Write-Host "=== Échec du bind : $BindDN sur $LdapServer`:$Port ===" -ForegroundColor Red

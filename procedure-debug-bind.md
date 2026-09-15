@@ -130,9 +130,40 @@ LDAPS n'écoute même pas sur ce port. C'est plus fondamental qu'un certificat s
 approuvé (où le port répondrait, avec une négociation TLS qui échouerait ensuite sur la
 confiance) — les deux symptômes se règlent différemment, d'où l'intérêt de bien distinguer
 "rien n'écoute" de "quelque chose écoute mais le certificat n'est pas fiable".
-**Remédiation** : déployer un certificat LDAPS valide sur le contrôleur de domaine (AD CS ou
-autorité externe) pour que le service commence à écouter sur 636 ; si un certificat existe déjà
-mais reste rejeté, alors distribuer son certificat racine aux postes clients (cas auto-signé).
+**Remédiation appliquée et vérifiée pour de vrai sur ce lab** (pas seulement décrite en
+théorie) :
+
+1. **Installer AD CS sur DC1** et le configurer en autorité racine d'entreprise :
+   ```powershell
+   Install-WindowsFeature AD-Certificate -IncludeManagementTools
+   Install-AdcsCertificationAuthority -CAType EnterpriseRootCA -Confirm:$false
+   ```
+   Le DC obtient alors automatiquement (auto-enrollment) un certificat pour
+   `CN=DC1.society.local`, et LDAPS commence à écouter sur 636 — confirmé par
+   `Test-NetConnection DC1.society.local -Port 636` (`TcpTestSucceeded: True`) et par une
+   négociation TLS brute réussie (`SslStream.AuthenticateAsClient`).
+
+2. Une fois le port ouvert, `Test-LdapBind.ps1 -UseTls` renvoyait encore un message générique
+   au lieu du vrai motif — deux bugs dans le script de validation du certificat, corrigés (voir
+   l'historique Git pour le détail). Le diagnostic est alors devenu précis : `PartialChain` —
+   chaîne de certificat non reconnue par ce poste client (l'autorité `society-DC1-CA` venait
+   d'être créée, ce poste ne lui faisait pas encore confiance).
+
+3. **Importer le certificat de l'autorité racine sur le poste client** :
+   ```powershell
+   # Sur DC1 :
+   Get-ChildItem Cert:\LocalMachine\My\<thumbprint-de-la-CA> | Export-Certificate -FilePath C:\societyRootCA.cer
+   # Transférer le fichier, puis sur le poste client (PowerShell admin) :
+   Import-Certificate -FilePath societyRootCA.cer -CertStoreLocation Cert:\LocalMachine\Root
+   ```
+   `PartialChain` disparaît. Reste alors `RevocationStatusUnknown`/`OfflineRevocation` — cette
+   CA fraîchement créée ne publie pas de CRL joignable depuis ce poste.
+
+4. **Choix assumé** : `RevocationMode = NoCheck` dans `Test-LdapBind.ps1` plutôt que de monter
+   une infrastructure CRL (IIS + republication) hors sujet pour ce lab — un choix réel et
+   courant pour une CA interne à faible enjeu (pas justifié pour une CA publique).
+
+![Bind LDAPS réussi après déploiement du certificat et correction des bugs de validation](screenshots/scenario7-ldaps-success-after-fix.png)
 
 ## 8. Mauvais format de DN
 
