@@ -224,6 +224,3 @@ client LDAP de cette application, pas d'un code universel.
 ```powershell
 .\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
 ```
-
-Bind réussi avec le format UPN correct (même capture qu'en section 1 — la remédiation est
-identique : c'est le format d'identifiant qui était en cause, pas le compte).
