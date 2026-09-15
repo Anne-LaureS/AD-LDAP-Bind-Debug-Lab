@@ -30,6 +30,12 @@ scénario ou le même compte réinitialisé entre deux essais, au choix.)
 **Remédiation** : vérifier le mot de passe saisi ; si répété, vérifier que ce n'est pas en fait
 un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un message générique.
 
+```powershell
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
+```
+
+![Bind réussi une fois le bon mot de passe utilisé](screenshots/scenario1-8-bind-success.png)
+
 ## 2. Compte désactivé (`data 533`)
 
 ```powershell
@@ -47,6 +53,13 @@ un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un messa
 **Sortie observée sur ce lab** : `data 533` → compte désactivé dans l'annuaire.
 **Remédiation** : `Enable-ADAccount` si la désactivation n'était pas volontaire.
 
+```powershell
+Enable-ADAccount -Identity btest -Server DC1.society.local -Credential (Get-Credential)
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
+```
+
+![Bind réussi après réactivation du compte](screenshots/scenario2-enabled-success.png)
+
 ## 3. Compte expiré (`data 701`)
 
 ```powershell
@@ -58,6 +71,13 @@ un compte verrouillé (voir section 4) qui masque l'erreur réelle sous un messa
 
 **Sortie observée sur ce lab** : `data 701` → date d'expiration du compte dépassée.
 **Remédiation** : `Clear-ADAccountExpiration` ou repousser la date via `Set-ADAccountExpiration`.
+
+```powershell
+Clear-ADAccountExpiration -Identity btest -Server DC1.society.local -Credential (Get-Credential)
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
+```
+
+Bind réussi une fois l'expiration levée (`Success: True`).
 
 ## 4. Compte verrouillé (`data 775`)
 
@@ -80,6 +100,13 @@ automatique après 30 minutes (`LockoutDuration`).
 **Remédiation** : `Unlock-ADAccount -Identity btest` pour débloquer immédiatement, ou attendre
 la fenêtre de déverrouillage automatique.
 
+```powershell
+Unlock-ADAccount -Identity btest -Server DC1.society.local -Credential (Get-Credential)
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
+```
+
+![Bind réussi après déverrouillage](screenshots/scenario4-unlock-success.png)
+
 ## 5. Mot de passe à changer / expiré (`data 532` ou `773`)
 
 ```powershell
@@ -94,6 +121,13 @@ la fenêtre de déverrouillage automatique.
 changer le mot de passe lui-même, contrairement à une session interactive Windows.
 **Remédiation** : forcer un changement de mot de passe via un canal qui le permet
 (`Set-ADAccountPassword` côté admin, ou le portail self-service de l'utilisateur).
+
+```powershell
+Set-ADAccountPassword -Identity btest -NewPassword $testPwd -Reset -Server DC1.society.local -Credential (Get-Credential)
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
+```
+
+![Bind réussi après réinitialisation du mot de passe](screenshots/scenario5-reset-success.png)
 
 ## 6. Bind anonyme et lecture anonyme de l'annuaire
 
@@ -186,3 +220,10 @@ résolution implicite).
 documentation plutôt que de se fier au code d'erreur renvoyé — c'est la panne la plus fréquente
 lors du branchement d'une nouvelle application sur l'annuaire, mais son diagnostic dépend du
 client LDAP de cette application, pas d'un code universel.
+
+```powershell
+.\Test-LdapBind.ps1 -BindDN "btest@society.local" -Password $testPwd
+```
+
+Bind réussi avec le format UPN correct (même capture qu'en section 1 — la remédiation est
+identique : c'est le format d'identifiant qui était en cause, pas le compte).
