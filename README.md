@@ -3,6 +3,7 @@
 ![PowerShell](https://img.shields.io/badge/PowerShell-5391FE?style=for-the-badge&logo=powershell&logoColor=white)
 ![ActiveDirectory](https://img.shields.io/badge/Active%20Directory-0078D4?style=for-the-badge&logo=windows&logoColor=white)
 ![LDAP](https://img.shields.io/badge/LDAP-Legacy%20Auth-0d1117?style=for-the-badge)
+[![Licence MIT](https://img.shields.io/badge/Licence-MIT-0d1117?style=for-the-badge)](LICENSE)
 
 Labo de debug pour l'authentification **legacy** par bind LDAP simple contre Active Directory —
 le counterpart de [Okta-SSO-Debug-Lab](https://github.com/Anne-LaureS/Okta-SSO-Debug-Lab) (OIDC/SAML)
@@ -90,3 +91,10 @@ forcés à correspondre à l'hypothèse initiale :
   naturelle à 60 jours — raccourci assumé et documenté, pas un contournement caché.
 - **Fichiers `.ps1` en UTF-8 avec BOM** dès leur création, comme le reste du portfolio —
   Windows PowerShell 5.1 lit mal les accents sans ce marqueur en tête de fichier.
+
+---
+
+## 📜 Licence
+
+Publié sous licence [MIT](LICENSE) © 2026 Anne-LaureS : réutilisation libre, à condition de conserver la
+mention de copyright. Fourni « tel quel », sans garantie.
